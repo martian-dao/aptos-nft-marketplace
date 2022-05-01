@@ -1,0 +1,24 @@
+[package]
+name = "aptos-nft-marketplace"
+version = "0.1.0"
+authors = ["Martian DAO <utkarsh@martiandao.xyz>"]
+repository = "https://github.com/martian-dao/aptos-nft-marketplace"
+homepage = "https://aptoslabs.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+# Add local path of aptos-vm and aptos-workspace-hack below
+aptos-vm = { path = "../aptos-vm" }
+aptos-workspace-hack = { path = "../../crates/aptos-workspace-hack" }
+#---------------------------------------------------------------------
+structopt = "0.3.21"
+move-compiler = { git = "https://github.com/move-language/move", rev = "1b6b7513dcc1a5c866f178ca5c1e74beb2ce181e" }
+move-package = { git = "https://github.com/move-language/move", rev = "1b6b7513dcc1a5c866f178ca5c1e74beb2ce181e" }
+move-stdlib = { git = "https://github.com/move-language/move", rev = "1b6b7513dcc1a5c866f178ca5c1e74beb2ce181e" }
+move-unit-test = { git = "https://github.com/move-language/move", rev = "1b6b7513dcc1a5c866f178ca5c1e74beb2ce181e", features=["table-extension"] }
+
+[dev-dependencies]
+move-cli = { git = "https://github.com/move-language/move", rev = "1b6b7513dcc1a5c866f178ca5c1e74beb2ce181e" }
+tempfile = "3.2.0"

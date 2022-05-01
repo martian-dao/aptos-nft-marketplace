@@ -1,0 +1,10 @@
+[package]
+name = "NFTMarketplace"
+version = "0.0.0"
+
+[addresses]
+NFTMarketplace = "0xe110"
+
+[dependencies]
+# Add local path of aptos-framework here
+AptosFramework = { local = "../framework/aptos-framework" }
