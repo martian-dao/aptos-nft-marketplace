@@ -1,13 +1,11 @@
 // Copyright (c) The Aptos Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-import assert from "assert";
-
 import { Account, RestClient, TESTNET_URL, FAUCET_URL, FaucetClient } from "./first_transaction";
-import fetch from "cross-fetch";
 import { TokenClient } from "./first_nft";
 
-const contractAddress = '0x786b02c7ba3087a7c81f82d4687805b9da3aad92e39a70ae520a73572da1e12c';
+const contractAddress = '0xe1ee48fdb74eccae5f6792a5a131b4282ac2ae151e4da8479cf3cafa9ffc6da1';
+const admin = '0x6ae4e044fb80028af5fd059fc9e2fca2da8b2accbc38be05713d19fc673cabbe';
 
 export class AuctionClient {
   restClient: RestClient;
@@ -34,7 +32,8 @@ export class AuctionClient {
         Buffer.from(collectionName).toString("hex"),
         Buffer.from(tokenName).toString("hex"),
         minBid.toString(),
-        duration.toString()
+        duration.toString(),
+        admin
       ]
     };
     return await this.submitTransactionHelper(account, payload);
@@ -51,6 +50,7 @@ export class AuctionClient {
         Buffer.from(collectionName).toString("hex"),
         Buffer.from(tokenName).toString("hex"),
         bid.toString(),
+        admin
       ]
     };
     return await this.submitTransactionHelper(account, payload);
@@ -66,6 +66,7 @@ export class AuctionClient {
         creator,
         Buffer.from(collectionName).toString("hex"),
         Buffer.from(tokenName).toString("hex"),
+        admin
       ]
     };
     return await this.submitTransactionHelper(account, payload);
@@ -80,6 +81,7 @@ export class AuctionClient {
         creator,
         Buffer.from(collectionName).toString("hex"),
         Buffer.from(tokenName).toString("hex"),
+        admin
       ]
     };
     return await this.submitTransactionHelper(account, payload);
