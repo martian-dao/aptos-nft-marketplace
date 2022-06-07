@@ -1,13 +1,10 @@
 // Copyright (c) The Aptos Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-import assert from "assert";
-
 import { Account, RestClient, TESTNET_URL, FAUCET_URL, FaucetClient } from "./first_transaction";
-import fetch from "cross-fetch";
 import { TokenClient } from "./first_nft";
 
-const contractAddress = '0x786b02c7ba3087a7c81f82d4687805b9da3aad92e39a70ae520a73572da1e12c';
+const contractAddress = '0xb511ef4c30435c0e987c8cab2fc386d0612705630067dda6e3a489d4da0e33f3';
 
 export class AuctionClient {
   restClient: RestClient;
@@ -27,13 +24,14 @@ export class AuctionClient {
   async listToken(account: Account, creator: string, collectionName: string, tokenName: string, price: number) {
     const payload: { function: string; arguments: string[]; type: string; type_arguments: any[] } = {
       type: "script_function_payload",
-      function: `${contractAddress}::Marketplace::list_token`,
+      function: `${contractAddress}::FixedPriceSale::list_token`,
       type_arguments: [],
       arguments: [
         creator,
         Buffer.from(collectionName).toString("hex"),
         Buffer.from(tokenName).toString("hex"),
-        price.toString()
+        price.toString(),
+        // admin
       ]
     };
     return await this.submitTransactionHelper(account, payload);
@@ -42,13 +40,14 @@ export class AuctionClient {
   async buyToken(account: Account, seller: string, creator: string, collectionName: string, tokenName: string) {
     const payload: { function: string; arguments: string[]; type: string; type_arguments: any[] } = {
       type: "script_function_payload",
-      function: `${contractAddress}::Marketplace::buy_token`,
+      function: `${contractAddress}::FixedPriceSale::buy_token`,
       type_arguments: [],
       arguments: [
         seller,
         creator,
         Buffer.from(collectionName).toString("hex"),
-        Buffer.from(tokenName).toString("hex")
+        Buffer.from(tokenName).toString("hex"),
+        // admin
       ]
     };
     return await this.submitTransactionHelper(account, payload);
@@ -101,6 +100,6 @@ async function main() {
     return "Test Completed"
 }
 
-  if (require.main === module) {
-    main().then((resp) => console.log(resp));
-  }
+if (require.main === module) {
+  main().then((resp) => console.log(resp));
+}

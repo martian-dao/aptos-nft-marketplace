@@ -4,8 +4,7 @@
 import { Account, RestClient, TESTNET_URL, FAUCET_URL, FaucetClient } from "./first_transaction";
 import { TokenClient } from "./first_nft";
 
-const contractAddress = '0x8bf4b30c9711a240b9166984a90b53c700dd0349942403c1a716aeb8d15ce874';
-// const admin = '0x6ae4e044fb80028af5fd059fc9e2fca2da8b2accbc38be05713d19fc673cabbe';
+const contractAddress = '';
 
 export class AuctionClient {
   restClient: RestClient;
@@ -25,7 +24,7 @@ export class AuctionClient {
   async initAuction(account: Account, creator: string, collectionName: string, tokenName: string, minBid: number, duration: number) {
     const payload: { function: string; arguments: string[]; type: string; type_arguments: any[] } = {
       type: "script_function_payload",
-      function: `${contractAddress}::AuctionHouse::initialize_auction`,
+      function: `${contractAddress}::Marketplace::initialize_auction`,
       type_arguments: [],
       arguments: [
         creator,
@@ -33,7 +32,6 @@ export class AuctionClient {
         Buffer.from(tokenName).toString("hex"),
         minBid.toString(),
         duration.toString(),
-        // admin
       ]
     };
     return await this.submitTransactionHelper(account, payload);
@@ -42,7 +40,7 @@ export class AuctionClient {
   async bid(account: Account, seller: string, creator: string, collectionName: string, tokenName: string, bid: number) {
     const payload: { function: string; arguments: string[]; type: string; type_arguments: any[] } = {
       type: "script_function_payload",
-      function: `${contractAddress}::AuctionHouse::bid`,
+      function: `${contractAddress}::Marketplace::bid`,
       type_arguments: [],
       arguments: [
         seller,
@@ -50,7 +48,6 @@ export class AuctionClient {
         Buffer.from(collectionName).toString("hex"),
         Buffer.from(tokenName).toString("hex"),
         bid.toString(),
-        // admin
       ]
     };
     return await this.submitTransactionHelper(account, payload);
@@ -59,14 +56,13 @@ export class AuctionClient {
   async claimToken(account: Account, seller: string, creator: string, collectionName: string, tokenName: string) {
     const payload: { function: string; arguments: string[]; type: string; type_arguments: any[] } = {
       type: "script_function_payload",
-      function: `${contractAddress}::AuctionHouse::claim_token`,
+      function: `${contractAddress}::Marketplace::claim_token`,
       type_arguments: [],
       arguments: [
         seller,
         creator,
         Buffer.from(collectionName).toString("hex"),
-        Buffer.from(tokenName).toString("hex"),
-        // admin
+        Buffer.from(tokenName).toString("hex")
       ]
     };
     return await this.submitTransactionHelper(account, payload);
@@ -75,20 +71,49 @@ export class AuctionClient {
   async claimCoins(account: Account, creator: string, collectionName: string, tokenName: string) {
     const payload: { function: string; arguments: string[]; type: string; type_arguments: any[] } = {
       type: "script_function_payload",
-      function: `${contractAddress}::AuctionHouse::claim_coins`,
+      function: `${contractAddress}::Marketplace::claim_coins`,
+      type_arguments: [],
+      arguments: [
+        creator,
+        Buffer.from(collectionName).toString("hex"),
+        Buffer.from(tokenName).toString("hex")
+      ]
+    };
+    return await this.submitTransactionHelper(account, payload);
+  }
+
+  async listToken(account: Account, creator: string, collectionName: string, tokenName: string, price: number) {
+    const payload: { function: string; arguments: string[]; type: string; type_arguments: any[] } = {
+      type: "script_function_payload",
+      function: `${contractAddress}::Marketplace::list_token`,
       type_arguments: [],
       arguments: [
         creator,
         Buffer.from(collectionName).toString("hex"),
         Buffer.from(tokenName).toString("hex"),
-        // admin
+        price.toString()
+      ]
+    };
+    return await this.submitTransactionHelper(account, payload);
+  }
+
+  async buyToken(account: Account, seller: string, creator: string, collectionName: string, tokenName: string) {
+    const payload: { function: string; arguments: string[]; type: string; type_arguments: any[] } = {
+      type: "script_function_payload",
+      function: `${contractAddress}::Marketplace::buy_token`,
+      type_arguments: [],
+      arguments: [
+        seller,
+        creator,
+        Buffer.from(collectionName).toString("hex"),
+        Buffer.from(tokenName).toString("hex")
       ]
     };
     return await this.submitTransactionHelper(account, payload);
   }
 }
 
-async function main() {
+async function auction() {
     const restClient = new RestClient(TESTNET_URL);
     const tokenClient = new TokenClient(restClient);
     const client = new AuctionClient(restClient);
@@ -163,6 +188,52 @@ async function main() {
     return "Test Completed"
 }
 
+async function fixed_price_sale() {
+    const restClient = new RestClient(TESTNET_URL);
+    const tokenClient = new TokenClient(restClient);
+    const client = new AuctionClient(restClient);
+    const faucet_client = new FaucetClient(FAUCET_URL, restClient);
+
+
+    const seller = new Account();
+    const buyer = new Account();
+    const collection_name = "AptosCollection";
+    const token_name = "AptosToken";
+
+    console.log("\n=== Addresses ===");
+    console.log(`Seller: ${seller.address()}`);
+    console.log(`Buyer: ${buyer.address()}`);
+
+    await faucet_client.fundAccount(seller.address(), 5000);
+    await faucet_client.fundAccount(buyer.address(), 20000);
+
+    console.log("\n=== Creating Collection and Token ===");
+
+    await tokenClient.createCollection(seller, collection_name, "Alice's simple collection", "https://aptos.dev");
+    await tokenClient.createToken(seller, collection_name, token_name, "Alice's simple token", 1, "https://aptos.dev/img/nyan.jpeg");
+
+    console.log("\nAptosCollection and AptosToken created");
+
+    const sellerAddress = `0x${seller.address().toString()}`;
+    const creatorAddress = `0x${seller.address().toString()}`;
+
+    console.log("\n=== Listing Token ===");
+    console.log("transaction hashes");
+    console.log(await client.listToken(seller, creatorAddress, collection_name, token_name, 10000)); //10 secs in microseconds
+
+    console.log("\n=== Buying token ===");
+    console.log("transaction hashes");
+    console.log(await client.buyToken(buyer, sellerAddress, creatorAddress, collection_name, token_name));
+
+    var token_balance = await tokenClient.getTokenBalance(sellerAddress, creatorAddress, collection_name, token_name);
+    console.log(`\nSeller token balance: ${token_balance}`)
+
+    token_balance = await tokenClient.getTokenBalance(buyer.address(), creatorAddress, collection_name, token_name);
+    console.log(`Buyer token balance: ${token_balance}`)
+    
+    return "Test Completed"
+}
+
 if (require.main === module) {
-  main().then((resp) => console.log(resp));
+    fixed_price_sale().then((resp) => console.log(resp));
 }
