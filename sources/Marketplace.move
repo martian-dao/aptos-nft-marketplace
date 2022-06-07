@@ -83,7 +83,30 @@ module AptosFramework::Marketplace {
         buying_events: EventHandle<BuyEvent>,
     }
 
-    public(script)fun initialize_auction(sender: &signer, creator: address, collection_name: vector<u8>, name: vector<u8>, min_selling_price: u64, duration: u64) acquires AuctionData {
+    struct MarketplaceEvents has key {
+        auction_events: EventHandle<AuctionEvent>,
+        bid_events: EventHandle<BidEvent>,
+        claim_coins_events: EventHandle<ClaimCoinsEvent>,
+        claim_token_events: EventHandle<ClaimTokenEvent>,
+        listing_events: EventHandle<ListEvent>,
+        buying_events: EventHandle<BuyEvent>,
+    }
+
+    public(script)fun register_admin(sender: &signer) acquires MarketplaceEvents {
+        let sender_addr = Signer::address_of(sender);
+        if (!exists<MarketplaceEvents>(sender_addr)) {
+            move_to(sender, MarketplaceEvents {
+                auction_events: Event::new_event_handle<AuctionEvent>(sender),
+                bid_events: Event::new_event_handle<BidEvent>(sender),
+                claim_coins_events: Event::new_event_handle<ClaimCoinsEvent>(sender),
+                claim_token_events: Event::new_event_handle<ClaimTokenEvent>(sender),
+                listing_events: Event::new_event_handle<ListEvent>(sender),
+                buying_events: Event::new_event_handle<BuyEvent>(sender),
+            });
+        };
+    }
+
+    public(script)fun initialize_auction(sender: &signer, creator: address, collection_name: vector<u8>, name: vector<u8>, min_selling_price: u64, duration: u64, admin: address) acquires AuctionData, MarketplaceEvents {
         let token_id = Token::create_token_id_raw(creator, collection_name, name);
         let sender_addr = Signer::address_of(sender);
         if (!exists<AuctionData>(sender_addr)) {
@@ -101,13 +124,15 @@ module AptosFramework::Marketplace {
         let auction_data = borrow_global_mut<AuctionData>(sender_addr);
         let auction_items = &mut auction_data.auction_items;
 
+        let events_data = borrow_global_mut<MarketplaceEvents>(admin);
+
         // if auction_items still contain token_id, this means that when sender_addr last auctioned this token,
         // they did not claim the coins from the highest bidder
         // sender_addr has received the same token somehow but has not claimed the coins from the initial auction
         assert!(!Table::contains(auction_items, token_id), ERROR_CLAIM_COINS_FIRST);
 
         Event::emit_event<AuctionEvent>(
-            &mut auction_data.auction_events,
+            &mut events_data.auction_events,
             AuctionEvent { id: token_id, min_selling_price: min_selling_price, duration: duration },
         );
 
@@ -131,7 +156,7 @@ module AptosFramework::Marketplace {
         current_time > start_time + duration
     }
 
-    public(script) fun bid(sender: &signer, seller: address, creator: address, collection_name: vector<u8>, name: vector<u8>, bid: u64) acquires CoinEscrow, AuctionData {
+    public(script) fun bid(sender: &signer, seller: address, creator: address, collection_name: vector<u8>, name: vector<u8>, bid: u64, admin: address) acquires CoinEscrow, AuctionData, MarketplaceEvents {
         let token_id = Token::create_token_id_raw(creator, collection_name, name);
         let sender_addr = Signer::address_of(sender);
         assert!(sender_addr != seller, ERROR_INVALID_BUYER);
@@ -155,8 +180,10 @@ module AptosFramework::Marketplace {
             Coin::deposit<TestCoin>(auction_item.current_bidder, coins);
         };
 
+        let events_data = borrow_global_mut<MarketplaceEvents>(admin);
+
         Event::emit_event<BidEvent>(
-            &mut auction_data.bid_events,
+            &mut events_data.bid_events,
             BidEvent { id: token_id, bid: bid },
         );
 
@@ -167,7 +194,7 @@ module AptosFramework::Marketplace {
         auction_item.current_bid = bid;
     }
 
-    public(script) fun claim_token(sender: &signer, seller: address, creator: address, collection_name: vector<u8>, name: vector<u8>) acquires CoinEscrow, AuctionData {
+    public(script) fun claim_token(sender: &signer, seller: address, creator: address, collection_name: vector<u8>, name: vector<u8>, admin: address) acquires CoinEscrow, AuctionData, MarketplaceEvents {
         let token_id = Token::create_token_id_raw(creator, collection_name, name);
         let sender_addr = Signer::address_of(sender);
 
@@ -178,8 +205,10 @@ module AptosFramework::Marketplace {
 
         assert!(sender_addr == auction_item.current_bidder, ERROR_NOT_CLAIMABLE);
 
+        let events_data = borrow_global_mut<MarketplaceEvents>(admin);
+
         Event::emit_event<ClaimTokenEvent>(
-            &mut auction_data.claim_token_events,
+            &mut events_data.claim_token_events,
             ClaimTokenEvent { id: token_id },
         );
 
@@ -190,8 +219,10 @@ module AptosFramework::Marketplace {
         let locked_coins = &mut borrow_global_mut<CoinEscrow>(sender_addr).locked_coins;
         // deposit the locked coins to the seller's sender if they have not claimed yet
         if (Table::contains(locked_coins, token_id)){
+            let events_data = borrow_global_mut<MarketplaceEvents>(admin);
+
             Event::emit_event<ClaimCoinsEvent>(
-                &mut auction_data.claim_coins_events,
+                &mut events_data.claim_coins_events,
                 ClaimCoinsEvent { id: token_id },
             );
             let coins = Table::remove(locked_coins, token_id);
@@ -201,7 +232,7 @@ module AptosFramework::Marketplace {
         Option::destroy_none(locked_token);
     }
 
-    public(script) fun claim_coins(sender: &signer, creator: address, collection_name: vector<u8>, name: vector<u8>) acquires CoinEscrow, AuctionData {
+    public(script) fun claim_coins(sender: &signer, creator: address, collection_name: vector<u8>, name: vector<u8>, admin: address) acquires CoinEscrow, AuctionData, MarketplaceEvents {
         let token_id = Token::create_token_id_raw(creator, collection_name, name);
         let sender_addr = Signer::address_of(sender);
 
@@ -215,8 +246,11 @@ module AptosFramework::Marketplace {
 
         let locked_coins = &mut borrow_global_mut<CoinEscrow>(auction_item.current_bidder).locked_coins;
         assert!(Table::contains(locked_coins, token_id), ERROR_ALREADY_CLAIMED);
+
+        let events_data = borrow_global_mut<MarketplaceEvents>(admin);
+
         Event::emit_event<ClaimCoinsEvent>(
-            &mut auction_data.claim_coins_events,
+            &mut events_data.claim_coins_events,
             ClaimCoinsEvent { id: token_id },
         );
         let coins = Table::remove(locked_coins, token_id);
@@ -230,7 +264,7 @@ module AptosFramework::Marketplace {
     }
 
     // part of the fixed price sale flow
-    public(script) fun list_token(sender: &signer, creator: address, collection_name: vector<u8>, name: vector<u8>, price: u64) acquires ListedItemsData{
+    public(script) fun list_token(sender: &signer, creator: address, collection_name: vector<u8>, name: vector<u8>, price: u64, admin: address) acquires ListedItemsData, MarketplaceEvents {
         let token_id = Token::create_token_id_raw(creator, collection_name, name);
         let sender_addr = Signer::address_of(sender);
 
@@ -247,8 +281,10 @@ module AptosFramework::Marketplace {
         let listed_items_data = borrow_global_mut<ListedItemsData>(sender_addr);
         let listed_items = &mut listed_items_data.listed_items;
 
+        let events_data = borrow_global_mut<MarketplaceEvents>(admin);
+
         Event::emit_event<ListEvent>(
-            &mut listed_items_data.listing_events,
+            &mut events_data.listing_events,
             ListEvent { id: token_id, amount: price },
         );
 
@@ -260,18 +296,21 @@ module AptosFramework::Marketplace {
     }
 
     // part of the fixed price sale flow
-    public(script) fun buy_token(sender: &signer, seller: address, creator: address, collection_name: vector<u8>, name: vector<u8>) acquires ListedItemsData {
+    public(script) fun buy_token(sender: &signer, seller: address, creator: address, collection_name: vector<u8>, name: vector<u8>, admin: address) acquires ListedItemsData, MarketplaceEvents {
         let token_id = Token::create_token_id_raw(creator, collection_name, name);
         let sender_addr = Signer::address_of(sender);
         assert!(sender_addr != seller, ERROR_INVALID_BUYER);
 
-        let listedItemsData = borrow_global_mut<ListedItemsData>(seller);
+        let listed_items_data = borrow_global_mut<ListedItemsData>(seller);
+
+        let events_data = borrow_global_mut<MarketplaceEvents>(admin);
+
         Event::emit_event<BuyEvent>(
-            &mut listedItemsData.buying_events,
+            &mut events_data.buying_events,
             BuyEvent { id: token_id },
         );
 
-        let listed_items = &mut listedItemsData.listed_items;
+        let listed_items = &mut listed_items_data.listed_items;
         let listed_item = Table::borrow_mut(listed_items, token_id);
 
         Coin::transfer<TestCoin>(sender, seller, listed_item.price);
