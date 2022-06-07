@@ -4,8 +4,7 @@
 import { Account, RestClient, TESTNET_URL, FAUCET_URL, FaucetClient } from "./first_transaction";
 import { TokenClient } from "./first_nft";
 
-const contractAddress = '0xe1ee48fdb74eccae5f6792a5a131b4282ac2ae151e4da8479cf3cafa9ffc6da1';
-const admin = '0x6ae4e044fb80028af5fd059fc9e2fca2da8b2accbc38be05713d19fc673cabbe';
+const contractAddress = '0xb511ef4c30435c0e987c8cab2fc386d0612705630067dda6e3a489d4da0e33f3';
 
 export class AuctionClient {
   restClient: RestClient;
@@ -25,14 +24,14 @@ export class AuctionClient {
   async listToken(account: Account, creator: string, collectionName: string, tokenName: string, price: number) {
     const payload: { function: string; arguments: string[]; type: string; type_arguments: any[] } = {
       type: "script_function_payload",
-      function: `${contractAddress}::Marketplace::list_token`,
+      function: `${contractAddress}::FixedPriceSale::list_token`,
       type_arguments: [],
       arguments: [
         creator,
         Buffer.from(collectionName).toString("hex"),
         Buffer.from(tokenName).toString("hex"),
         price.toString(),
-        admin
+        // admin
       ]
     };
     return await this.submitTransactionHelper(account, payload);
@@ -41,14 +40,14 @@ export class AuctionClient {
   async buyToken(account: Account, seller: string, creator: string, collectionName: string, tokenName: string) {
     const payload: { function: string; arguments: string[]; type: string; type_arguments: any[] } = {
       type: "script_function_payload",
-      function: `${contractAddress}::Marketplace::buy_token`,
+      function: `${contractAddress}::FixedPriceSale::buy_token`,
       type_arguments: [],
       arguments: [
         seller,
         creator,
         Buffer.from(collectionName).toString("hex"),
         Buffer.from(tokenName).toString("hex"),
-        admin
+        // admin
       ]
     };
     return await this.submitTransactionHelper(account, payload);

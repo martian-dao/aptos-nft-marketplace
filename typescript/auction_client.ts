@@ -4,8 +4,8 @@
 import { Account, RestClient, TESTNET_URL, FAUCET_URL, FaucetClient } from "./first_transaction";
 import { TokenClient } from "./first_nft";
 
-const contractAddress = '0xe1ee48fdb74eccae5f6792a5a131b4282ac2ae151e4da8479cf3cafa9ffc6da1';
-const admin = '0x6ae4e044fb80028af5fd059fc9e2fca2da8b2accbc38be05713d19fc673cabbe';
+const contractAddress = '0x8bf4b30c9711a240b9166984a90b53c700dd0349942403c1a716aeb8d15ce874';
+// const admin = '0x6ae4e044fb80028af5fd059fc9e2fca2da8b2accbc38be05713d19fc673cabbe';
 
 export class AuctionClient {
   restClient: RestClient;
@@ -25,7 +25,7 @@ export class AuctionClient {
   async initAuction(account: Account, creator: string, collectionName: string, tokenName: string, minBid: number, duration: number) {
     const payload: { function: string; arguments: string[]; type: string; type_arguments: any[] } = {
       type: "script_function_payload",
-      function: `${contractAddress}::Marketplace::initialize_auction`,
+      function: `${contractAddress}::AuctionHouse::initialize_auction`,
       type_arguments: [],
       arguments: [
         creator,
@@ -33,7 +33,7 @@ export class AuctionClient {
         Buffer.from(tokenName).toString("hex"),
         minBid.toString(),
         duration.toString(),
-        admin
+        // admin
       ]
     };
     return await this.submitTransactionHelper(account, payload);
@@ -42,7 +42,7 @@ export class AuctionClient {
   async bid(account: Account, seller: string, creator: string, collectionName: string, tokenName: string, bid: number) {
     const payload: { function: string; arguments: string[]; type: string; type_arguments: any[] } = {
       type: "script_function_payload",
-      function: `${contractAddress}::Marketplace::bid`,
+      function: `${contractAddress}::AuctionHouse::bid`,
       type_arguments: [],
       arguments: [
         seller,
@@ -50,7 +50,7 @@ export class AuctionClient {
         Buffer.from(collectionName).toString("hex"),
         Buffer.from(tokenName).toString("hex"),
         bid.toString(),
-        admin
+        // admin
       ]
     };
     return await this.submitTransactionHelper(account, payload);
@@ -59,14 +59,14 @@ export class AuctionClient {
   async claimToken(account: Account, seller: string, creator: string, collectionName: string, tokenName: string) {
     const payload: { function: string; arguments: string[]; type: string; type_arguments: any[] } = {
       type: "script_function_payload",
-      function: `${contractAddress}::Marketplace::claim_token`,
+      function: `${contractAddress}::AuctionHouse::claim_token`,
       type_arguments: [],
       arguments: [
         seller,
         creator,
         Buffer.from(collectionName).toString("hex"),
         Buffer.from(tokenName).toString("hex"),
-        admin
+        // admin
       ]
     };
     return await this.submitTransactionHelper(account, payload);
@@ -75,13 +75,13 @@ export class AuctionClient {
   async claimCoins(account: Account, creator: string, collectionName: string, tokenName: string) {
     const payload: { function: string; arguments: string[]; type: string; type_arguments: any[] } = {
       type: "script_function_payload",
-      function: `${contractAddress}::Marketplace::claim_coins`,
+      function: `${contractAddress}::AuctionHouse::claim_coins`,
       type_arguments: [],
       arguments: [
         creator,
         Buffer.from(collectionName).toString("hex"),
         Buffer.from(tokenName).toString("hex"),
-        admin
+        // admin
       ]
     };
     return await this.submitTransactionHelper(account, payload);
